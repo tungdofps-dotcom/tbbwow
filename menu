@@ -1,0 +1,432 @@
+-- Lil Cesus Full Ability Rework & Menu Script
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Xóa menu cũ nếu có để tránh trùng lặp
+local existingGui = CoreGui:FindFirstChild("LilCesusAbilityMenu")
+if existingGui then
+    existingGui:Destroy()
+end
+
+-- Tạo ScreenGui chính
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "LilCesusAbilityMenu"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = CoreGui
+
+-- Nút mở/đóng Menu (Vị trí chuẩn theo ảnh của bro)
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 55, 0, 55)
+toggleButton.Position = UDim2.new(0, 20, 0, 320)
+toggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Text = "Menu"
+toggleButton.TextSize = 14
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.Parent = screenGui
+
+local cornerToggle = Instance.new("UICorner")
+cornerToggle.CornerRadius = UDim.new(0, 10)
+cornerToggle.Parent = toggleButton
+
+-- Khung chứa danh sách chức năng (Menu)
+local mainFrame = Instance.new("ScrollingFrame")
+mainFrame.Size = UDim2.new(0, 260, 0, 350)
+mainFrame.Position = UDim2.new(0, 85, 0, 240)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+mainFrame.CanvasSize = UDim2.new(0, 0, 0, 500)
+mainFrame.Parent = screenGui
+
+local cornerMain = Instance.new("UICorner")
+cornerMain.CornerRadius = UDim.new(0, 12)
+cornerMain.Parent = mainFrame
+
+local uiLayout = Instance.new("UIListLayout")
+uiLayout.Padding = UDim.new(0, 8)
+uiLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+uiLayout.SortOrder = Enum.SortOrder.LayoutOrder
+uiLayout.Parent = mainFrame
+
+toggleButton.MouseButton1Click:Connect(function()
+    mainFrame.Visible = not mainFrame.Visible
+end)
+
+-- Hàm tạo nút trong Menu
+local function createMenuButton(text, callback, order)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 240, 0, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Text = text
+    btn.TextSize = 13
+    btn.Font = Enum.Font.GothamMedium
+    btn.LayoutOrder = order
+    btn.Parent = mainFrame
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = btn
+
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+-- ID Animation Kỹ năng Rework của Lil Cesus
+local SWING_ANIM_ID = "116164627866886"
+local SPINNING_ANIM_ID = "18630067279"
+local SCREAM_ANIM_ID = "71934684104275"
+local TEAPOT_ANIM_ID = "126991906303498"
+
+local EXTRA_ANIM_IDS = {
+    SWING_ANIM_ID,
+    SPINNING_ANIM_ID,
+    SCREAM_ANIM_ID,
+    "135042525730074",
+    "73777178502433",
+    "180435571",
+    "180435792",
+    "123717209698945",
+    "73104865351128",
+}
+
+local function playCustomAnimation(animator, targetId, speedMultiplier)
+    if not animator then return end
+    pcall(function()
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://" .. targetId
+        local track = animator:LoadAnimation(anim)
+        track:Play()
+        track:AdjustSpeed(speedMultiplier or 1.0)
+    end)
+end
+
+local function isValidTarget(obj)
+    if not obj or not obj:IsA("Model") then return false end
+    local objName = string.lower(obj.Name)
+
+    if objName == "lil cesus" then return false end
+
+    local player = Players:GetPlayerFromCharacter(obj)
+    if player then
+        if player.Team and string.find(string.lower(player.Team.Name), "blue") then
+            return false
+        end
+        local lowerName = string.lower(player.Name)
+        if lowerName == "livefraudreac" or lowerName == "skibidibattle" or string.find(lowerName, "blue") then
+            return false
+        end
+    end
+    
+    if string.find(objName, "blue") or objName == "livefraudreac" or objName == "skibidibattle" then
+        return false
+    end
+
+    if not (string.find(objName, "battler") or string.find(objName, "zombie") or string.find(objName, "boss")) then
+        return false
+    end
+
+    return true
+end
+
+local isSwinging = false
+local isTeapotThrowing = false
+
+-- Lắng nghe sự kiện Animation để kích hoạt Ability Rework
+local function setupAnimationListener(character)
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    if not humanoid then return end
+    local animator = humanoid:WaitForChild("Animator", 5)
+    if not animator then return end
+
+    animator.AnimationPlayed:Connect(function(track)
+        local anim = track and track.Animation
+        if anim then
+            local currentId = anim.AnimationId
+            local healthPercent = (humanoid.Health / humanoid.MaxHealth) * 100
+            local isLowHp = healthPercent <= 50 -- Mốc kích hoạt từ 50% máu trở xuống
+
+            for _, idString in ipairs(EXTRA_ANIM_IDS) do
+                if string.find(currentId, idString) then
+                    return
+                end
+            end
+
+            if isLowHp and (string.find(currentId, SWING_ANIM_ID) or string.find(currentId, "74660250225424")) then
+                if not isSwinging then
+                    isSwinging = true
+                    pcall(function() track:Stop(0) end)
+
+                    playCustomAnimation(animator, SWING_ANIM_ID, 2.5)
+
+                    local RootPart = character:FindFirstChild("HumanoidRootPart")
+                    if RootPart then
+                        local draggingForce = Instance.new("LinearVelocity")
+                        draggingForce.MaxForce = 5000
+                        draggingForce.VectorVelocity = Vector3.new(0, 0, 0)
+                        draggingForce.Attachment0 = Instance.new("Attachment", RootPart)
+                        draggingForce.Parent = RootPart
+
+                        for _, obj in ipairs(Workspace:GetDescendants()) do
+                            if isValidTarget(obj) then
+                                local enemyRoot = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")
+                                if enemyRoot then
+                                    local distance = (enemyRoot.Position - RootPart.Position).Magnitude
+                                    if distance <= 45 then
+                                        local pullVel = Instance.new("LinearVelocity")
+                                        local att = Instance.new("Attachment", enemyRoot)
+                                        pullVel.Attachment0 = att
+                                        pullVel.MaxForce = 30000
+                                        pullVel.VectorVelocity = (RootPart.Position - enemyRoot.Position).Unit * 25
+                                        pullVel.Parent = enemyRoot
+                                        task.delay(0.5, function()
+                                            if pullVel then pullVel:Destroy() end
+                                            if att then att:Destroy() end
+                                        end)
+                                    end
+                                end
+                            end
+                        end
+
+                        task.delay(2.15, function()
+                            if draggingForce then draggingForce:Destroy() end
+                            if not RootPart or not RootPart.Parent then isSwinging = false return end
+
+                            local flyUp = Instance.new("LinearVelocity")
+                            local attachment = Instance.new("Attachment", RootPart)
+                            flyUp.Attachment0 = attachment
+                            flyUp.MaxForce = 999999
+                            flyUp.VectorVelocity = Vector3.new(0, 75, 0)
+                            flyUp.Parent = RootPart
+
+                            task.delay(0.25, function()
+                                if flyUp then flyUp:Destroy() end
+                                
+                                local slamDown = Instance.new("LinearVelocity")
+                                slamDown.Attachment0 = attachment
+                                slamDown.MaxForce = 999999
+                                slamDown.VectorVelocity = Vector3.new(0, -120, 0)
+                                slamDown.Parent = RootPart
+
+                                task.wait(0.15)
+                                if slamDown then slamDown:Destroy() end
+                                if attachment then attachment:Destroy() end
+
+                                local explosionPos = RootPart.Position
+                                local explosion = Instance.new("Explosion")
+                                explosion.Position = explosionPos
+                                explosion.BlastRadius = 35
+                                explosion.BlastPressure = 0
+                                explosion.Parent = Workspace
+
+                                local missingPercent = math.clamp(50 - healthPercent, 0, 50)
+                                local calculatedDamage = 100 + (missingPercent * 25)
+
+                                for _, obj in ipairs(Workspace:GetDescendants()) do
+                                    if isValidTarget(obj) then
+                                        local enemyHumanoid = obj:FindFirstChildOfClass("Humanoid")
+                                        local enemyRoot = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")
+                                        if enemyHumanoid and enemyRoot then
+                                            local distance = (enemyRoot.Position - explosionPos).Magnitude
+                                            if distance <= 35 then
+                                                pcall(function()
+                                                    enemyHumanoid:TakeDamage(calculatedDamage)
+                                                    if enemyHumanoid.Health <= calculatedDamage then
+                                                        enemyHumanoid.Health = 0
+                                                        enemyHumanoid:ChangeState(Enum.HumanoidStateType.Dead)
+                                                    end
+                                                end)
+                                            end
+                                        end
+                                    end
+                                end
+                                isSwinging = false
+                            end)
+                        end)
+                    else
+                        isSwinging = false
+                    end
+                end
+
+            elseif not isLowHp and string.find(currentId, SWING_ANIM_ID) then
+                if not isSwinging then
+                    isSwinging = true
+                    playCustomAnimation(animator, SWING_ANIM_ID, 1.0)
+
+                    local RootPart = character:FindFirstChild("HumanoidRootPart")
+                    if RootPart then
+                        local draggingForce = Instance.new("LinearVelocity")
+                        draggingForce.MaxForce = 5000
+                        draggingForce.VectorVelocity = Vector3.new(0, 0, 0)
+                        draggingForce.Attachment0 = Instance.new("Attachment", RootPart)
+                        draggingForce.Parent = RootPart
+
+                        task.delay(3.5, function()
+                            if isSwinging and RootPart and RootPart.Parent then
+                                local pushBack = Instance.new("LinearVelocity")
+                                pushBack.MaxForce = 999999
+                                pushBack.VectorVelocity = -RootPart.CFrame.LookVector * 50 + Vector3.new(0, 15, 0)
+                                pushBack.Attachment0 = draggingForce.Attachment0
+                                pushBack.Parent = RootPart
+                                
+                                task.wait(0.2)
+                                if pushBack then pushBack:Destroy() end
+                            end
+                            if draggingForce then draggingForce:Destroy() end
+                            isSwinging = false
+                        end)
+                    else
+                        isSwinging = false
+                    end
+                end
+
+            elseif string.find(currentId, TEAPOT_ANIM_ID) then
+                if isTeapotThrowing then return end
+                
+                if isLowHp then
+                    isTeapotThrowing = true
+
+                    local RootPart = character:FindFirstChild("HumanoidRootPart")
+                    if not RootPart then isTeapotThrowing = false return end
+
+                    local pushBack = Instance.new("LinearVelocity")
+                    local attachment = Instance.new("Attachment", RootPart)
+                    pushBack.Attachment0 = attachment
+                    pushBack.MaxForce = 999999
+                    pushBack.VectorVelocity = Vector3.new(-RootPart.CFrame.LookVector.X * 45, 0, -RootPart.CFrame.LookVector.Z * 45)
+                    pushBack.Parent = RootPart
+                    
+                    task.wait(0.2)
+                    if pushBack then pushBack:Destroy() end
+                    if attachment then attachment:Destroy() end
+
+                    track.Stopped:Connect(function()
+                        local tpVelocity = Instance.new("LinearVelocity")
+                        local tpAttachment = Instance.new("Attachment", RootPart)
+                        tpVelocity.Attachment0 = tpAttachment
+                        tpVelocity.MaxForce = 50000
+                        tpVelocity.Parent = RootPart
+
+                        local runConn
+                        local elapsedTime = 0
+                        local duration = 3.5
+
+                        runConn = RunService.RenderStepped:Connect(function(dt)
+                            elapsedTime = elapsedTime + dt
+                            if elapsedTime <= duration then
+                                if character and RootPart and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+                                    local moveDir = humanoid.MoveDirection
+                                    tpVelocity.VectorVelocity = Vector3.new(moveDir.X * 12, tpVelocity.VectorVelocity.Y, moveDir.Z * 12)
+                                else
+                                    tpVelocity.VectorVelocity = Vector3.new(0, 0, 0)
+                                end
+                            else
+                                if runConn then runConn:Disconnect() end
+                                if tpVelocity then tpVelocity:Destroy() end
+                                if tpAttachment then tpAttachment:Destroy() end
+                                
+                                if RootPart and RootPart.Parent then
+                                    local explosionPos = RootPart.Position
+                                    local explosion = Instance.new("Explosion")
+                                    explosion.Position = explosionPos
+                                    explosion.BlastRadius = 35
+                                    explosion.BlastPressure = 0
+                                    explosion.Parent = Workspace
+
+                                    local missingPercent = math.clamp(50 - healthPercent, 0, 50)
+                                    local calculatedDamage = 100 + (missingPercent * 25)
+
+                                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                                        if isValidTarget(obj) then
+                                            local enemyHumanoid = obj:FindFirstChildOfClass("Humanoid")
+                                            local enemyRoot = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")
+                                            if enemyHumanoid and enemyRoot then
+                                                local distance = (enemyRoot.Position - explosionPos).Magnitude
+                                                if distance <= 35 then
+                                                    pcall(function()
+                                                        enemyHumanoid:TakeDamage(calculatedDamage)
+                                                        if enemyHumanoid.Health <= calculatedDamage then
+                                                            enemyHumanoid.Health = 0
+                                                            enemyHumanoid:ChangeState(Enum.HumanoidStateType.Dead)
+                                                        end
+                                                    end)
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
+                                isTeapotThrowing = false
+                            end
+                        end)
+                    end)
+                end
+            end
+        end
+    end)
+end
+
+-- Thêm các nút điều khiển thủ công vào Menu
+createMenuButton("Anim: 11616462 (Swing)", function()
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+        if animator then playCustomAnimation(animator, SWING_ANIM_ID, 1.0) end
+    end
+end, 1)
+
+createMenuButton("SpinningAnim", function()
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+        if animator then playCustomAnimation(animator, SPINNING_ANIM_ID, 1.0) end
+    end
+end, 2)
+
+createMenuButton("ScreamingAnim", function()
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+        if animator then playCustomAnimation(animator, SCREAM_ANIM_ID, 1.0) end
+    end
+end, 3)
+
+createMenuButton("Anim1 (180435571)", function()
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+        if animator then playCustomAnimation(animator, "180435571", 1.0) end
+    end
+end, 4)
+
+createMenuButton("Anim2 (180435792)", function()
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+        if animator then playCustomAnimation(animator, "180435792", 1.0) end
+    end
+end, 5)
+
+createMenuButton("IdleAnim", function()
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+        if animator then playCustomAnimation(animator, "123717209698945", 1.0) end
+    end
+end, 6)
+
+-- Khởi chạy kết nối
+if LocalPlayer.Character then
+    setupAnimationListener(LocalPlayer.Character)
+end
+
+LocalPlayer.CharacterAdded:Connect(setupAnimationListener)
