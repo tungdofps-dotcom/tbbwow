@@ -157,7 +157,7 @@ local SWING_ANIM_ID = "99881191150215"
 local TEAPOT_ANIM_ID = "126991906303498"
 local PHASE2_ANIM_ID = "117666725557838"
 
--- ID Phase 3 và Idle/Run mới (với tốc độ 2.5)
+-- Phase 3 IDs
 local PHASE3_TRANS_ID = "110754291756171"
 local LOW_HP_IDLE_ID = "81998275496859"
 local LOW_HP_WALK_RUN_ID = "18978131428"
@@ -208,38 +208,52 @@ local function removeHalo(character)
     end
 end
 
+-- Ép thay thế hoàn toàn hệ thống animation đứng và chạy ở mốc <= 20% máu
 local function applyLowHpAnimations(character)
     removeHalo(character)
     local animateScript = character:FindFirstChild("Animate")
     if animateScript then
-        -- Gán Idle
-        local idle = animateScript:FindFirstChild("idle")
-        if idle then
-            for _, child in ipairs(idle:GetChildren()) do
-                if child:IsA("Animation") then
-                    child.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_ID
-                end
-            end
-        end
-        -- Gán Walk
-        local walk = animateScript:FindFirstChild("walk")
-        if walk then
-            for _, child in ipairs(walk:GetChildren()) do
-                if child:IsA("Animation") then
-                    child.AnimationId = "rbxassetid://" .. LOW_HP_WALK_RUN_ID
-                end
-            end
-        end
-        -- Gán Run
-        local run = animateScript:FindFirstChild("run")
-        if run then
-            for _, child in ipairs(run:GetChildren()) do
-                if child:IsA("Animation") then
-                    child.AnimationId = "rbxassetid://" .. LOW_HP_WALK_RUN_ID
-                end
-            end
-        end
+        animateScript.Disabled = true -- Tắt script animate mặc định để tránh tranh chấp
     end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+    if not animator then return end
+
+    -- Load trực tiếp hoạt ảnh Idle và Walk/Run với tốc độ 2.5
+    local idleAnim = Instance.new("Animation")
+    idleAnim.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_ID
+    local idleTrack = animator:LoadAnimation(idleAnim)
+    idleTrack.Priority = Enum.AnimationPriority.Core
+    idleTrack:AdjustSpeed(2.5)
+
+    local moveAnim = Instance.new("Animation")
+    moveAnim.AnimationId = "rbxassetid://" .. LOW_HP_WALK_RUN_ID
+    local moveTrack = animator:LoadAnimation(moveAnim)
+    moveTrack.Priority = Enum.AnimationPriority.Movement
+    moveTrack:AdjustSpeed(2.5)
+
+    -- Theo dõi trạng thái di chuyển để bật/tắt chuẩn xác
+    task.spawn(function()
+        while character and character.Parent and humanoid.Health / humanoid.MaxHealth <= 0.2 do
+            if humanoid.MoveDirection.Magnitude > 0.05 then
+                if not moveTrack.IsPlaying then
+                    if idleTrack.IsPlaying then idleTrack:Stop(0.1) end
+                    moveTrack:Play(0.1)
+                end
+            else
+                if not idleTrack.IsPlaying then
+                    if moveTrack.IsPlaying then moveTrack:Stop(0.1) end
+                    idleTrack:Play(0.1)
+                end
+            end
+            task.wait(0.1)
+        end
+        -- Dọn dẹp nếu hồi máu hoặc chết
+        if idleTrack.IsPlaying then idleTrack:Stop() end
+        if moveTrack.IsPlaying then moveTrack:Stop() end
+    end)
 end
 
 local function setupAnimationListener(character)
@@ -252,7 +266,7 @@ local function setupAnimationListener(character)
         local maxHealth = humanoid.MaxHealth
         local hpPercent = health / maxHealth
 
-        -- Khôi phục Phase 2 đầy đủ logic
+        -- Khôi phục trọn vẹn Phase 2 (<= 50% máu)
         if not phase2Triggered and hpPercent <= 0.5 and hpPercent > 0.2 then
             phase2Triggered = true
             isChangingPhase = true
@@ -265,11 +279,12 @@ local function setupAnimationListener(character)
         elseif not phase3Triggered and hpPercent <= 0.2 then
             phase3Triggered = true
             isChangingPhase = true
-            applyLowHpAnimations(character)
             
+            -- Chạy hoạt ảnh chuyển dạng Phase 3 với tốc độ 2.5
             local phaseTrack = playCustomAnimation(animator, PHASE3_TRANS_ID, 2.5)
             phaseTrack.Stopped:Connect(function()
                 isChangingPhase = false
+                applyLowHpAnimations(character) -- Kích hoạt đứng/chạy mới sau khi chuyển dạng xong
             end)
         end
     end)
@@ -289,7 +304,7 @@ local function setupAnimationListener(character)
 
                     local RootPart = character:FindFirstChild("HumanoidRootPart")
                     if RootPart then
-                        -- Đợi 5 giây trong lúc animation mốc 20% máu chạy rồi mới đẩy lùi
+                        -- Đợi đúng 5 giây khi animation mốc 20% máu kích hoạt rồi mới đẩy lùi
                         task.delay(5.0, function()
                             if not RootPart or not RootPart.Parent then isSwinging = false return end
 
