@@ -157,7 +157,7 @@ local SWING_ANIM_ID = "99881191150215"
 local TEAPOT_ANIM_ID = "126991906303498"
 local PHASE2_ANIM_ID = "117666725557838"
 
--- Cập nhật ID theo yêu cầu mới nhất của bro
+-- ID Phase 3 và Idle/Run mới (với tốc độ 2.5)
 local PHASE3_TRANS_ID = "110754291756171"
 local LOW_HP_IDLE_ID = "81998275496859"
 local LOW_HP_WALK_RUN_ID = "18978131428"
@@ -212,22 +212,32 @@ local function applyLowHpAnimations(character)
     removeHalo(character)
     local animateScript = character:FindFirstChild("Animate")
     if animateScript then
+        -- Gán Idle
         local idle = animateScript:FindFirstChild("idle")
         if idle then
-            local anim1 = idle:FindFirstChild("Animation1")
-            local anim2 = idle:FindFirstChild("Animation2")
-            if anim1 then anim1.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_ID end
-            if anim2 then anim2.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_ID end
+            for _, child in ipairs(idle:GetChildren()) do
+                if child:IsA("Animation") then
+                    child.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_ID
+                end
+            end
         end
+        -- Gán Walk
         local walk = animateScript:FindFirstChild("walk")
         if walk then
-            local walkAnim = walk:FindFirstChild("WalkAnim")
-            if walkAnim then walkAnim.AnimationId = "rbxassetid://" .. LOW_HP_WALK_RUN_ID end
+            for _, child in ipairs(walk:GetChildren()) do
+                if child:IsA("Animation") then
+                    child.AnimationId = "rbxassetid://" .. LOW_HP_WALK_RUN_ID
+                end
+            end
         end
+        -- Gán Run
         local run = animateScript:FindFirstChild("run")
         if run then
-            local runAnim = run:FindFirstChild("RunAnim")
-            if runAnim then runAnim.AnimationId = "rbxassetid://" .. LOW_HP_WALK_RUN_ID end
+            for _, child in ipairs(run:GetChildren()) do
+                if child:IsA("Animation") then
+                    child.AnimationId = "rbxassetid://" .. LOW_HP_WALK_RUN_ID
+                end
+            end
         end
     end
 end
@@ -242,6 +252,7 @@ local function setupAnimationListener(character)
         local maxHealth = humanoid.MaxHealth
         local hpPercent = health / maxHealth
 
+        -- Khôi phục Phase 2 đầy đủ logic
         if not phase2Triggered and hpPercent <= 0.5 and hpPercent > 0.2 then
             phase2Triggered = true
             isChangingPhase = true
@@ -256,7 +267,6 @@ local function setupAnimationListener(character)
             isChangingPhase = true
             applyLowHpAnimations(character)
             
-            -- Phase 3 chuyển dạng với tốc độ 2.5
             local phaseTrack = playCustomAnimation(animator, PHASE3_TRANS_ID, 2.5)
             phaseTrack.Stopped:Connect(function()
                 isChangingPhase = false
@@ -279,7 +289,7 @@ local function setupAnimationListener(character)
 
                     local RootPart = character:FindFirstChild("HumanoidRootPart")
                     if RootPart then
-                        -- Khi chạy animation mốc dưới 20% máu này, đúng 5 giây sau sẽ áp dụng lực đẩy
+                        -- Đợi 5 giây trong lúc animation mốc 20% máu chạy rồi mới đẩy lùi
                         task.delay(5.0, function()
                             if not RootPart or not RootPart.Parent then isSwinging = false return end
 
