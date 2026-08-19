@@ -449,3 +449,61 @@ local function applyHaloToModel(model)
                     end
                 end
             end
+        end
+        
+        if not isTargetUnit then
+            for _, attrVal in pairs(model:GetAttributes()) do
+                if tonumber(attrVal) == 11 then
+                    isTargetUnit = true
+                    break
+                end
+            end
+        end
+
+        if isTargetUnit then
+            if not model:FindFirstChild("AngelHaloVisual") then
+                local haloPart = Instance.new("Part")
+                haloPart.Name = "AngelHaloVisual"
+                haloPart.Size = Vector3.new(1.366, 0.202, 1.35)
+                haloPart.Material = Enum.Material.Neon
+                haloPart.Color = Color3.fromRGB(255, 255, 255)
+                haloPart.Anchored = false
+                haloPart.CanCollide = false
+                haloPart.Massless = true
+
+                local mesh = Instance.new("SpecialMesh")
+                mesh.MeshType = Enum.MeshType.FileMesh
+                mesh.MeshId = "rbxassetid://9285228633"
+                mesh.Scale = Vector3.new(1, 1, 1)
+                mesh.Parent = haloPart
+
+                haloPart.CFrame = head.CFrame * CFrame.new(0, 1.2, 0) * CFrame.Angles(math.rad(180), math.rad(68.768), math.rad(180))
+                haloPart.Parent = model
+
+                local weld = Instance.new("WeldConstraint")
+                weld.Part0 = head
+                weld.Part1 = haloPart
+                weld.Parent = haloPart
+            end
+        end
+    end
+
+    checkAndApply()
+    model.DescendantAdded:Connect(function()
+        task.wait(0.1)
+        checkAndApply()
+    end)
+end
+
+for _, obj in ipairs(workspace:GetDescendants()) do
+    if obj:IsA("Model") then
+        applyHaloToModel(obj)
+    end
+end
+
+workspace.DescendantAdded:Connect(function(descendant)
+    if descendant:IsA("Model") then
+        task.wait(0.2)
+        applyHaloToModel(descendant)
+    end
+end)
