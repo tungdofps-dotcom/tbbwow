@@ -164,9 +164,8 @@ local SWING_ANIM_ID = "99881191150215"
 local LOW_HP_SWING_ID = "74660250225424"
 local TEAPOT_ANIM_ID = "126991906303498"
 local PHASE2_ANIM_ID = "117666725557838"
-local PHASE3_TRANS_ID = "110754291756171" -- P3TransAnim chuyển đổi
-local LOW_HP_IDLE_ID = "81998275496859"  -- IdleAnim khi ở mốc máu 20%
-local LOW_HP_WALK_ID = "117676747425686" -- WalkAnim khi ở mốc máu 20%
+local PHASE3_TRANS_ID = "110754291756171"
+local LOW_HP_IDLE_WALK_ID = "117666725557838"
 
 local function playCustomAnimation(animator, targetId, speedMultiplier)
     local anim = Instance.new("Animation")
@@ -177,15 +176,46 @@ local function playCustomAnimation(animator, targetId, speedMultiplier)
     return track
 end
 
--- Hàm hỗ trợ gỡ bỏ Halo Angel khỏi model nhân vật
+-- Hàm tạo vụ nổ nhỏ hoàn toàn không gây sát thương khi vòng sáng Halo biến mất
+local function createHarmlessExplosion(character)
+    local head = character:FindFirstChild("Head")
+    if not head then return end
+
+    -- Hiệu ứng khói / tia lửa ảo (không dùng đối tượng Explosion gây damage của Roblox)
+    local part = Instance.new("Part")
+    part.Size = Vector3.new(0.5, 0.5, 0.5)
+    part.CFrame = head.CFrame
+    part.Transparency = 1
+    part.Anchored = true
+    part.CanCollide = false
+    part.Parent = workspace
+
+    local emitter = Instance.new("ParticleEmitter")
+    emitter.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(200, 220, 255))
+    emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 2.5)})
+    emitter.Texture = "rbxassetid://1084991215" -- Particle khói sáng
+    emitter.Lifetime = NumberRange.new(0.3, 0.6)
+    emitter.Rate = 100
+    emitter.Speed = NumberRange.new(10, 20)
+    emitter.SpreadAngle = Vector2.new(180, 180)
+    emitter.Parent = part
+
+    emitter:Emit(30) -- Phát ra 30 hạt lửa/khói nhỏ một lần duy nhất
+
+    task.delay(1.0, function()
+        part:Destroy()
+    end)
+end
+
+-- Gỡ bỏ Halo và kích hoạt hiệu ứng vụ nổ không gây damge
 local function removeHalo(character)
     local halo = character:FindFirstChild("AngelHaloVisual")
     if halo then
+        createHarmlessExplosion(character)
         halo:Destroy()
     end
 end
 
--- Hàm cập nhật toàn bộ Animation Đứng (Idle) và Chạy (Walk) của nhân vật khi đạt mốc 20% máu
 local function applyLowHpAnimations(character)
     removeHalo(character)
     local animateScript = character:FindFirstChild("Animate")
@@ -194,13 +224,13 @@ local function applyLowHpAnimations(character)
         if idle then
             local anim1 = idle:FindFirstChild("Animation1")
             local anim2 = idle:FindFirstChild("Animation2")
-            if anim1 then anim1.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_ID end
-            if anim2 then anim2.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_ID end
+            if anim1 then anim1.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_WALK_ID end
+            if anim2 then anim2.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_WALK_ID end
         end
         local walk = animateScript:FindFirstChild("walk")
         if walk then
             local walkAnim = walk:FindFirstChild("WalkAnim")
-            if walkAnim then walkAnim.AnimationId = "rbxassetid://" .. LOW_HP_WALK_ID end
+            if walkAnim then walkAnim.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_WALK_ID end
         end
     end
 end
@@ -215,7 +245,7 @@ local function setupAnimationListener(character)
         local maxHealth = humanoid.MaxHealth
         local hpPercent = health / maxHealth
 
-        -- Kích hoạt Phase 2 ở mốc 50% máu
+        -- Phase 2 (50% máu): Giữ nguyên chuẩn chiêu swing cũ
         if not phase2Triggered and hpPercent <= 0.5 and hpPercent > 0.2 then
             phase2Triggered = true
             isChangingPhase = true
@@ -225,7 +255,7 @@ local function setupAnimationListener(character)
                 isChangingPhase = false
             end)
             
-        -- Kích hoạt Phase 3 ở mốc 20% máu (gồm P3TransAnim, đổi animation Đứng/Chạy và xóa Halo)
+        -- Phase 3 (20% máu): Xóa halo + nổ không damge + đổi animation đứng/chạy
         elseif not phase3Triggered and hpPercent <= 0.2 then
             phase3Triggered = true
             isChangingPhase = true
@@ -286,7 +316,7 @@ local function setupAnimationListener(character)
                                 if slamDown then slamDown:Destroy() end
                                 if attachment then attachment:Destroy() end
                                 
-                                -- [LOGIC BỊ ĐẨY LẠI SAU KHI SLAMDOWN VÀ MỐC 20% MÁU]:
+                                -- Đẩy lại sau khi slamDown xong
                                 local pushBack = Instance.new("LinearVelocity")
                                 local attPush = Instance.new("Attachment", RootPart)
                                 pushBack.Attachment0 = attPush
@@ -298,7 +328,7 @@ local function setupAnimationListener(character)
                                 if pushBack then pushBack:Destroy() end
                                 if attPush then attPush:Destroy() end
 
-                                -- Sau 5 giây kể từ lúc bị đẩy lại, nếu HP <= 20% thì kích hoạt P3TransAnim + đổi animation Đứng/Chạy + xóa Halo
+                                -- Sau 5 giây, nếu HP <= 20% thì kích hoạt chuyển pha 3
                                 if (humanoid.Health / humanoid.MaxHealth) <= 0.2 then
                                     task.delay(5.0, function()
                                         if character and humanoid and animator and not isChangingPhase then
@@ -415,7 +445,6 @@ local function applyHaloToModel(model)
         local head = model:FindFirstChild("Head")
         if not head then return end
         
-        -- Nếu máu đã <= 20% thì không hiển thị halo
         local humanoid = model:FindFirstChildOfClass("Humanoid")
         if humanoid and (humanoid.Health / humanoid.MaxHealth) <= 0.2 then
             return
@@ -490,8 +519,4 @@ for _, obj in ipairs(workspace:GetDescendants()) do
 end
 
 workspace.DescendantAdded:Connect(function(descendant)
-    if descendant:IsA("Model") then
-        task.wait(0.2)
-        applyHaloToModel(descendant)
-    end
-end)
+    if descendant:IsA("Model
