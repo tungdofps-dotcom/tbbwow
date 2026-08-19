@@ -158,7 +158,9 @@ local LOW_HP_SWING_ID = "74660250225424"
 local TEAPOT_ANIM_ID = "126991906303498"
 local PHASE2_ANIM_ID = "117666725557838"
 local PHASE3_TRANS_ID = "110754291756171"
-local LOW_HP_IDLE_WALK_ID = "117666725557838"
+
+local LOW_HP_IDLE_ID = "117666725557838"
+local LOW_HP_WALK_RUN_ID = "74660250225424"
 
 local function playCustomAnimation(animator, targetId, speedMultiplier)
     local anim = Instance.new("Animation")
@@ -214,13 +216,18 @@ local function applyLowHpAnimations(character)
         if idle then
             local anim1 = idle:FindFirstChild("Animation1")
             local anim2 = idle:FindFirstChild("Animation2")
-            if anim1 then anim1.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_WALK_ID end
-            if anim2 then anim2.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_WALK_ID end
+            if anim1 then anim1.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_ID end
+            if anim2 then anim2.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_ID end
         end
         local walk = animateScript:FindFirstChild("walk")
         if walk then
             local walkAnim = walk:FindFirstChild("WalkAnim")
-            if walkAnim then walkAnim.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_WALK_ID end
+            if walkAnim then walkAnim.AnimationId = "rbxassetid://" .. LOW_HP_WALK_RUN_ID end
+        end
+        local run = animateScript:FindFirstChild("run")
+        if run then
+            local runAnim = run:FindFirstChild("RunAnim")
+            if runAnim then runAnim.AnimationId = "rbxassetid://" .. LOW_HP_WALK_RUN_ID end
         end
     end
 end
@@ -263,7 +270,7 @@ local function setupAnimationListener(character)
         if anim then
             local currentId = anim.AnimationId
             local hpPercent = (humanoid.Health / humanoid.MaxHealth)
-            local isLowHp = hpPercent <= 0.5
+            local isLowHp = hpPercent <= 0.2
 
             if isLowHp and (string.find(currentId, SWING_ANIM_ID) or string.find(currentId, LOW_HP_SWING_ID)) then
                 if not isSwinging then
@@ -274,64 +281,22 @@ local function setupAnimationListener(character)
 
                     local RootPart = character:FindFirstChild("HumanoidRootPart")
                     if RootPart then
-                        local draggingForce = Instance.new("LinearVelocity")
-                        draggingForce.MaxForce = 5000
-                        draggingForce.VectorVelocity = Vector3.new(0, 0, 0)
-                        draggingForce.Attachment0 = Instance.new("Attachment", RootPart)
-                        draggingForce.Parent = RootPart
-
-                        task.delay(2.28, function()
-                            if draggingForce then draggingForce:Destroy() end
+                        -- Đúng ý bro: Animation 20% máu kích hoạt -> Đợi đúng 5 giây trong lúc animation chạy rồi mới đẩy lùi
+                        task.delay(5.0, function()
                             if not RootPart or not RootPart.Parent then isSwinging = false return end
 
-                            local flyUp = Instance.new("LinearVelocity")
-                            local attachment = Instance.new("Attachment", RootPart)
-                            flyUp.Attachment0 = attachment
-                            flyUp.MaxForce = 999999
-                            flyUp.VectorVelocity = Vector3.new(0, 75, 0)
-                            flyUp.Parent = RootPart
+                            local pushBack = Instance.new("LinearVelocity")
+                            local attPush = Instance.new("Attachment", RootPart)
+                            pushBack.Attachment0 = attPush
+                            pushBack.MaxForce = 999999
+                            pushBack.VectorVelocity = -RootPart.CFrame.LookVector * 40 + Vector3.new(0, 10, 0)
+                            pushBack.Parent = RootPart
+                            
+                            task.wait(0.2)
+                            if pushBack then pushBack:Destroy() end
+                            if attPush then attPush:Destroy() end
 
-                            task.delay(0.25, function()
-                                if flyUp then flyUp:Destroy() end
-                                
-                                local slamDown = Instance.new("LinearVelocity")
-                                slamDown.Attachment0 = attachment
-                                slamDown.MaxForce = 999999
-                                slamDown.VectorVelocity = Vector3.new(0, -120, 0)
-                                slamDown.Parent = RootPart
-
-                                task.wait(0.15)
-                                if slamDown then slamDown:Destroy() end
-                                if attachment then attachment:Destroy() end
-                                
-                                local pushBack = Instance.new("LinearVelocity")
-                                local attPush = Instance.new("Attachment", RootPart)
-                                pushBack.Attachment0 = attPush
-                                pushBack.MaxForce = 999999
-                                pushBack.VectorVelocity = -RootPart.CFrame.LookVector * 40 + Vector3.new(0, 10, 0)
-                                pushBack.Parent = RootPart
-                                
-                                task.wait(0.2)
-                                if pushBack then pushBack:Destroy() end
-                                if attPush then attPush:Destroy() end
-
-                                if (humanoid.Health / humanoid.MaxHealth) <= 0.2 then
-                                    task.delay(5.0, function()
-                                        if character and humanoid and animator and not isChangingPhase then
-                                            phase3Triggered = true
-                                            isChangingPhase = true
-                                            applyLowHpAnimations(character)
-                                            
-                                            local p3Track = playCustomAnimation(animator, PHASE3_TRANS_ID, 1.2)
-                                            p3Track.Stopped:Connect(function()
-                                                isChangingPhase = false
-                                            end)
-                                        end
-                                    end)
-                                end
-
-                                isSwinging = false
-                            end)
+                            isSwinging = false
                         end)
                     else
                         isSwinging = false
