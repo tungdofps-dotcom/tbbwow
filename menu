@@ -1,167 +1,255 @@
--- Lil Cesus Full Ability Rework & Menu Script
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- Xóa menu cũ nếu có để tránh trùng lặp
-local existingGui = CoreGui:FindFirstChild("LilCesusAbilityMenu")
-if existingGui then
-    existingGui:Destroy()
+if CoreGui:FindFirstChild("ReworkAbilityMenu") then
+    CoreGui.ReworkAbilityMenu:Destroy()
 end
 
--- Tạo ScreenGui chính
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "LilCesusAbilityMenu"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = CoreGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ReworkAbilityMenu"
+ScreenGui.Parent = CoreGui
 
--- Nút mở/đóng Menu (Vị trí chuẩn theo ảnh của bro)
-local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(0, 55, 0, 55)
-toggleButton.Position = UDim2.new(0, 20, 0, 320)
-toggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.Text = "Menu"
-toggleButton.TextSize = 14
-toggleButton.Font = Enum.Font.GothamBold
-toggleButton.Parent = screenGui
+-- MENU CHÍNH GUI
+local ToggleMenuBtn = Instance.new("TextButton")
+ToggleMenuBtn.Name = "ToggleMenuBtn"
+ToggleMenuBtn.Size = UDim2.new(0, 45, 0, 45)
+ToggleMenuBtn.Position = UDim2.new(0, 20, 0.5, -22)
+ToggleMenuBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleMenuBtn.Text = "Logo"
+ToggleMenuBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleMenuBtn.TextSize, ToggleMenuBtn.Font = 12, Enum.Font.GothamBold
+ToggleMenuBtn.Draggable = true
+ToggleMenuBtn.Active = true
+ToggleMenuBtn.Parent = ScreenGui
 
-local cornerToggle = Instance.new("UICorner")
-cornerToggle.CornerRadius = UDim.new(0, 10)
-cornerToggle.Parent = toggleButton
+local LogoCorner = Instance.new("UICorner")
+LogoCorner.CornerRadius = UDim.new(1, 0)
+LogoCorner.Parent = ToggleMenuBtn
 
--- Khung chứa danh sách chức năng (Menu)
-local mainFrame = Instance.new("ScrollingFrame")
-mainFrame.Size = UDim2.new(0, 260, 0, 350)
-mainFrame.Position = UDim2.new(0, 85, 0, 240)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainFrame.BorderSizePixel = 0
-mainFrame.Visible = false
-mainFrame.CanvasSize = UDim2.new(0, 0, 0, 500)
-mainFrame.Parent = screenGui
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 180, 0, 40)
+MainFrame.Position = UDim2.new(0, 75, 0.5, -20)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Visible = true
+MainFrame.Parent = ScreenGui
 
-local cornerMain = Instance.new("UICorner")
-cornerMain.CornerRadius = UDim.new(0, 12)
-cornerMain.Parent = mainFrame
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
 
-local uiLayout = Instance.new("UIListLayout")
-uiLayout.Padding = UDim.new(0, 8)
-uiLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-uiLayout.SortOrder = Enum.SortOrder.LayoutOrder
-uiLayout.Parent = mainFrame
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Rework Ability"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 14
+Title.Font = Enum.Font.GothamBold
+Title.Parent = MainFrame
 
-toggleButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
+local menuVisible = true
+ToggleMenuBtn.MouseButton1Click:Connect(function()
+    menuVisible = not menuVisible
+    MainFrame.Visible = menuVisible
+    ToggleMenuBtn.BackgroundColor3 = menuVisible and Color3.fromRGB(40, 40, 40) or Color3.fromRGB(80, 40, 40)
 end)
 
--- Hàm tạo nút trong Menu
-local function createMenuButton(text, callback, order)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 240, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Text = text
-    btn.TextSize = 13
-    btn.Font = Enum.Font.GothamMedium
-    btn.LayoutOrder = order
-    btn.Parent = mainFrame
+---------------------------------------------------------
+-- JOYSTICK ĐIỀU KHIỂN VẬN TỐC
+---------------------------------------------------------
+local JoystickBase = Instance.new("Frame")
+JoystickBase.Name = "JoystickBase"
+JoystickBase.Size = UDim2.new(0, 120, 0, 120)
+JoystickBase.Position = UDim2.new(0.08, 0, 0.55, 0)
+JoystickBase.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+JoystickBase.BackgroundTransparency = 0.3
+JoystickBase.Visible = false
+JoystickBase.Parent = ScreenGui
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = btn
+local BaseCorner = Instance.new("UICorner")
+BaseCorner.CornerRadius = UDim.new(1, 0)
+BaseCorner.Parent = JoystickBase
 
-    btn.MouseButton1Click:Connect(callback)
-    return btn
-end
+local JoystickThumb = Instance.new("Frame")
+JoystickThumb.Name = "Thumb"
+JoystickThumb.Size = UDim2.new(0, 45, 0, 45)
+JoystickThumb.Position = UDim2.new(0.5, -22.5, 0.5, -22.5)
+JoystickThumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+JoystickThumb.BackgroundTransparency = 0.2
+JoystickThumb.Parent = JoystickBase
 
--- ID Animation Kỹ năng Rework của Lil Cesus
-local SWING_ANIM_ID = "116164627866886"
-local SPINNING_ANIM_ID = "18630067279"
-local SCREAM_ANIM_ID = "71934684104275"
-local TEAPOT_ANIM_ID = "126991906303498"
+local ThumbCorner = Instance.new("UICorner")
+ThumbCorner.CornerRadius = UDim.new(1, 0)
+ThumbCorner.Parent = JoystickThumb
 
-local EXTRA_ANIM_IDS = {
-    SWING_ANIM_ID,
-    SPINNING_ANIM_ID,
-    SCREAM_ANIM_ID,
-    "135042525730074",
-    "73777178502433",
-    "180435571",
-    "180435792",
-    "123717209698945",
-    "73104865351128",
-}
+local isDragging = false
+local moveDirectionVector = Vector2.zero
 
-local function playCustomAnimation(animator, targetId, speedMultiplier)
-    if not animator then return end
-    pcall(function()
-        local anim = Instance.new("Animation")
-        anim.AnimationId = "rbxassetid://" .. targetId
-        local track = animator:LoadAnimation(anim)
-        track:Play()
-        track:AdjustSpeed(speedMultiplier or 1.0)
-    end)
-end
-
-local function isValidTarget(obj)
-    if not obj or not obj:IsA("Model") then return false end
-    local objName = string.lower(obj.Name)
-
-    if objName == "lil cesus" then return false end
-
-    local player = Players:GetPlayerFromCharacter(obj)
-    if player then
-        if player.Team and string.find(string.lower(player.Team.Name), "blue") then
-            return false
-        end
-        local lowerName = string.lower(player.Name)
-        if lowerName == "livefraudreac" or lowerName == "skibidibattle" or string.find(lowerName, "blue") then
-            return false
-        end
-    end
+local function stopJoystickMovement()
+    isDragging = false
+    moveDirectionVector = Vector2.zero
+    JoystickThumb.Position = UDim2.new(0.5, -22.5, 0.5, -22.5)
     
-    if string.find(objName, "blue") or objName == "livefraudreac" or objName == "skibidibattle" then
-        return false
+    if LocalPlayer.Character then
+        local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if rootPart then
+            rootPart.AssemblyLinearVelocity = Vector3.new(0, rootPart.AssemblyLinearVelocity.Y, 0)
+        end
     end
-
-    if not (string.find(objName, "battler") or string.find(objName, "zombie") or string.find(objName, "boss")) then
-        return false
-    end
-
-    return true
 end
 
+local function updateJoystick(input)
+    if not JoystickBase.Visible then return end
+    if workspace.CurrentCamera and input.Position.X > workspace.CurrentCamera.ViewportSize.X / 2 then return end
+
+    isDragging = true
+    local center = JoystickBase.AbsolutePosition + (JoystickBase.AbsoluteSize / 2)
+    local inputPos = Vector2.new(input.Position.X, input.Position.Y)
+    local delta = inputPos - center
+    local radius = JoystickBase.AbsoluteSize.X / 2
+    local clampedDelta = delta.Magnitude > radius and (delta.Unit * radius) or delta
+    
+    JoystickThumb.Position = UDim2.new(0.5, clampedDelta.X - 22.5, 0.5, clampedDelta.Y - 22.5)
+    moveDirectionVector = Vector2.new(clampedDelta.X / radius, clampedDelta.Y / radius)
+end
+
+game:GetService("UserInputService").InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        updateJoystick(input)
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if JoystickBase.Visible then
+            updateJoystick(input)
+        end
+    end
+end)
+
+game:GetService("UserInputService").InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        stopJoystickMovement()
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if JoystickBase.Visible and isDragging and moveDirectionVector.Magnitude > 0.05 and LocalPlayer.Character then
+        local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if rootPart then
+            local speed = 16
+            local forward = rootPart.CFrame.LookVector
+            local right = rootPart.CFrame.RightVector
+            
+            local flatForward = Vector3.new(forward.X, 0, forward.Z).Unit
+            local flatRight = Vector3.new(right.X, 0, right.Z).Unit
+            
+            local moveVel = (flatForward * (-moveDirectionVector.Y) + flatRight * moveDirectionVector.X) * speed
+            rootPart.AssemblyLinearVelocity = Vector3.new(moveVel.X, rootPart.AssemblyLinearVelocity.Y, moveVel.Z)
+        end
+    end
+end)
+
+---------------------------------------------------------
+-- LOGIC KỸ NĂNG, ANIMATION VÀ PHASE 2 / PHASE 3
+---------------------------------------------------------
 local isSwinging = false
 local isTeapotThrowing = false
+local phase2Triggered = false
+local phase3Triggered = false
+local isChangingPhase = false
 
--- Lắng nghe sự kiện Animation để kích hoạt Ability Rework
+local SWING_ANIM_ID = "99881191150215"
+local LOW_HP_SWING_ID = "74660250225424"
+local TEAPOT_ANIM_ID = "126991906303498"
+local PHASE2_ANIM_ID = "117666725557838"
+local PHASE3_TRANS_ID = "110754291756171" -- P3TransAnim chuyển đổi
+local LOW_HP_IDLE_ID = "81998275496859"  -- IdleAnim chuẩn khi ở mốc máu thấp
+local LOW_HP_WALK_ID = "117676747425686" -- WalkAnim chuẩn khi ở mốc máu thấp
+
+local function playCustomAnimation(animator, targetId, speedMultiplier)
+    local anim = Instance.new("Animation")
+    anim.AnimationId = "rbxassetid://" .. targetId
+    local track = animator:LoadAnimation(anim)
+    track:Play()
+    track:AdjustSpeed(speedMultiplier or 1.0)
+    return track
+end
+
+-- Hàm hỗ trợ gỡ bỏ Halo Angel khỏi model nhân vật
+local function removeHalo(character)
+    local halo = character:FindFirstChild("AngelHaloVisual")
+    if halo then
+        halo:Destroy()
+    end
+end
+
 local function setupAnimationListener(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
     if not humanoid then return end
     local animator = humanoid:WaitForChild("Animator", 5)
     if not animator then return end
 
-    animator.AnimationPlayed:Connect(function(track)
-        local anim = track and track.Animation
-        if anim then
-            local currentId = anim.AnimationId
-            local healthPercent = (humanoid.Health / humanoid.MaxHealth) * 100
-            local isLowHp = healthPercent <= 50 -- Mốc kích hoạt từ 50% máu trở xuống
+    humanoid.HealthChanged:Connect(function(health)
+        local maxHealth = humanoid.MaxHealth
+        local hpPercent = health / maxHealth
 
-            for _, idString in ipairs(EXTRA_ANIM_IDS) do
-                if string.find(currentId, idString) then
-                    return
+        -- Kích hoạt Phase 2 ở mốc 50% máu
+        if not phase2Triggered and hpPercent <= 0.5 and hpPercent > 0.2 then
+            phase2Triggered = true
+            isChangingPhase = true
+            
+            local phaseTrack = playCustomAnimation(animator, PHASE2_ANIM_ID, 1.5)
+            phaseTrack.Stopped:Connect(function()
+                isChangingPhase = false
+            end)
+            
+        -- Kích hoạt Phase 3 ở mốc 20% máu (đồng thời xóa Halo)
+        elseif not phase3Triggered and hpPercent <= 0.2 then
+            phase3Triggered = true
+            isChangingPhase = true
+            removeHalo(character)
+            
+            local phaseTrack = playCustomAnimation(animator, PHASE3_TRANS_ID, 1.5)
+            phaseTrack.Stopped:Connect(function()
+                isChangingPhase = false
+            end)
+            
+            -- Thay thế Animation mặc định (Idle / Walk) thành dạng mốc 20% máu
+            local animateScript = character:FindFirstChild("Animate")
+            if animateScript then
+                local idle = animateScript:FindFirstChild("idle")
+                if idle then
+                    local anim1 = idle:FindFirstChild("Animation1")
+                    local anim2 = idle:FindFirstChild("Animation2")
+                    if anim1 then anim1.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_ID end
+                    if anim2 then anim2.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_ID end
+                end
+                local walk = animateScript:FindFirstChild("walk")
+                if walk then
+                    local walkAnim = walk:FindFirstChild("WalkAnim")
+                    if walkAnim then walkAnim.AnimationId = "rbxassetid://" .. LOW_HP_WALK_ID end
                 end
             end
+        end
+    end)
 
-            if isLowHp and (string.find(currentId, SWING_ANIM_ID) or string.find(currentId, "74660250225424")) then
+    animator.AnimationPlayed:Connect(function(track)
+        if isChangingPhase then return end
+
+        local anim = track.Animation
+        if anim then
+            local currentId = anim.AnimationId
+            local hpPercent = (humanoid.Health / humanoid.MaxHealth)
+            local isLowHp = hpPercent <= 0.5
+
+            if isLowHp and (string.find(currentId, SWING_ANIM_ID) or string.find(currentId, LOW_HP_SWING_ID)) then
                 if not isSwinging then
                     isSwinging = true
-                    pcall(function() track:Stop(0) end)
+                    track:Stop(0)
 
-                    playCustomAnimation(animator, SWING_ANIM_ID, 2.5)
+                    playCustomAnimation(animator, LOW_HP_SWING_ID, 2.2)
 
                     local RootPart = character:FindFirstChild("HumanoidRootPart")
                     if RootPart then
@@ -171,28 +259,7 @@ local function setupAnimationListener(character)
                         draggingForce.Attachment0 = Instance.new("Attachment", RootPart)
                         draggingForce.Parent = RootPart
 
-                        for _, obj in ipairs(Workspace:GetDescendants()) do
-                            if isValidTarget(obj) then
-                                local enemyRoot = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")
-                                if enemyRoot then
-                                    local distance = (enemyRoot.Position - RootPart.Position).Magnitude
-                                    if distance <= 45 then
-                                        local pullVel = Instance.new("LinearVelocity")
-                                        local att = Instance.new("Attachment", enemyRoot)
-                                        pullVel.Attachment0 = att
-                                        pullVel.MaxForce = 30000
-                                        pullVel.VectorVelocity = (RootPart.Position - enemyRoot.Position).Unit * 25
-                                        pullVel.Parent = enemyRoot
-                                        task.delay(0.5, function()
-                                            if pullVel then pullVel:Destroy() end
-                                            if att then att:Destroy() end
-                                        end)
-                                    end
-                                end
-                            end
-                        end
-
-                        task.delay(2.15, function()
+                        task.delay(2.28, function()
                             if draggingForce then draggingForce:Destroy() end
                             if not RootPart or not RootPart.Parent then isSwinging = false return end
 
@@ -215,35 +282,39 @@ local function setupAnimationListener(character)
                                 task.wait(0.15)
                                 if slamDown then slamDown:Destroy() end
                                 if attachment then attachment:Destroy() end
-
-                                local explosionPos = RootPart.Position
-                                local explosion = Instance.new("Explosion")
-                                explosion.Position = explosionPos
-                                explosion.BlastRadius = 35
-                                explosion.BlastPressure = 0
-                                explosion.Parent = Workspace
-
-                                local missingPercent = math.clamp(50 - healthPercent, 0, 50)
-                                local calculatedDamage = 100 + (missingPercent * 25)
-
-                                for _, obj in ipairs(Workspace:GetDescendants()) do
-                                    if isValidTarget(obj) then
-                                        local enemyHumanoid = obj:FindFirstChildOfClass("Humanoid")
-                                        local enemyRoot = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")
-                                        if enemyHumanoid and enemyRoot then
-                                            local distance = (enemyRoot.Position - explosionPos).Magnitude
-                                            if distance <= 35 then
-                                                pcall(function()
-                                                    enemyHumanoid:TakeDamage(calculatedDamage)
-                                                    if enemyHumanoid.Health <= calculatedDamage then
-                                                        enemyHumanoid.Health = 0
-                                                        enemyHumanoid:ChangeState(Enum.HumanoidStateType.Dead)
-                                                    end
-                                                end)
+                                
+                                -- [YÊU CẦU MỚI]: Khi HP <= 20%, sau 5 giây bị đẩy lại (tính từ lúc kết thúc slamDown) thì chạy P3TransAnim và xóa Halo
+                                if (humanoid.Health / humanoid.MaxHealth) <= 0.2 then
+                                    task.delay(5.0, function()
+                                        if character and humanoid and animator and not isChangingPhase then
+                                            isChangingPhase = true
+                                            removeHalo(character)
+                                            
+                                            local p3Track = playCustomAnimation(animator, PHASE3_TRANS_ID, 1.2)
+                                            p3Track.Stopped:Connect(function()
+                                                isChangingPhase = false
+                                            end)
+                                            
+                                            -- Cập nhật animation Idle/Walk mốc 20% máu
+                                            local animateScript = character:FindFirstChild("Animate")
+                                            if animateScript then
+                                                local idle = animateScript:FindFirstChild("idle")
+                                                if idle then
+                                                    local anim1 = idle:FindFirstChild("Animation1")
+                                                    local anim2 = idle:FindFirstChild("Animation2")
+                                                    if anim1 then anim1.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_ID end
+                                                    if anim2 then anim2.AnimationId = "rbxassetid://" .. LOW_HP_IDLE_ID end
+                                                end
+                                                local walk = animateScript:FindFirstChild("walk")
+                                                if walk then
+                                                    local walkAnim = walk:FindFirstChild("WalkAnim")
+                                                    if walkAnim then walkAnim.AnimationId = "rbxassetid://" .. LOW_HP_WALK_ID end
+                                                end
                                             end
                                         end
-                                    end
+                                    end)
                                 end
+
                                 isSwinging = false
                             end)
                         end)
@@ -256,177 +327,172 @@ local function setupAnimationListener(character)
                 if not isSwinging then
                     isSwinging = true
                     playCustomAnimation(animator, SWING_ANIM_ID, 1.0)
+                    JoystickBase.Visible = true
+                    
+                    task.delay(4, function()
+                        JoystickBase.Visible = false
+                        stopJoystickMovement()
 
-                    local RootPart = character:FindFirstChild("HumanoidRootPart")
-                    if RootPart then
-                        local draggingForce = Instance.new("LinearVelocity")
-                        draggingForce.MaxForce = 5000
-                        draggingForce.VectorVelocity = Vector3.new(0, 0, 0)
-                        draggingForce.Attachment0 = Instance.new("Attachment", RootPart)
-                        draggingForce.Parent = RootPart
-
-                        task.delay(3.5, function()
-                            if isSwinging and RootPart and RootPart.Parent then
-                                local pushBack = Instance.new("LinearVelocity")
-                                pushBack.MaxForce = 999999
-                                pushBack.VectorVelocity = -RootPart.CFrame.LookVector * 50 + Vector3.new(0, 15, 0)
-                                pushBack.Attachment0 = draggingForce.Attachment0
-                                pushBack.Parent = RootPart
-                                
-                                task.wait(0.2)
-                                if pushBack then pushBack:Destroy() end
-                            end
-                            if draggingForce then draggingForce:Destroy() end
-                            isSwinging = false
-                        end)
-                    else
+                        local RootPart = character:FindFirstChild("HumanoidRootPart")
+                        if RootPart then
+                            local pushBack = Instance.new("LinearVelocity")
+                            local att = Instance.new("Attachment", RootPart)
+                            pushBack.Attachment0 = att
+                            pushBack.MaxForce = 999999
+                            pushBack.VectorVelocity = -RootPart.CFrame.LookVector * 40 + Vector3.new(0, 10, 0)
+                            pushBack.Parent = RootPart
+                            
+                            task.wait(0.2)
+                            if pushBack then pushBack:Destroy() end
+                            if att then att:Destroy() end
+                        end
                         isSwinging = false
-                    end
+                    end)
                 end
 
             elseif string.find(currentId, TEAPOT_ANIM_ID) then
                 if isTeapotThrowing then return end
+                isTeapotThrowing = true
+
+                local RootPart = character:FindFirstChild("HumanoidRootPart")
+                if not RootPart then isTeapotThrowing = false return end
+
+                local pushBack = Instance.new("LinearVelocity")
+                local attachment = Instance.new("Attachment", RootPart)
+                pushBack.Attachment0 = attachment
+                pushBack.MaxForce = 999999
+                pushBack.VectorVelocity = Vector3.new(-RootPart.CFrame.LookVector.X * 45, 0, -RootPart.CFrame.LookVector.Z * 45)
+                pushBack.Parent = RootPart
                 
-                if isLowHp then
-                    isTeapotThrowing = true
+                task.wait(0.2)
+                if pushBack then pushBack:Destroy() end
+                if attachment then attachment:Destroy() end
 
-                    local RootPart = character:FindFirstChild("HumanoidRootPart")
-                    if not RootPart then isTeapotThrowing = false return end
+                track.Stopped:Connect(function()
+                    local tpVelocity = Instance.new("LinearVelocity")
+                    local tpAttachment = Instance.new("Attachment", RootPart)
+                    tpVelocity.Attachment0 = tpAttachment
+                    tpVelocity.MaxForce = 50000
+                    tpVelocity.Parent = RootPart
 
-                    local pushBack = Instance.new("LinearVelocity")
-                    local attachment = Instance.new("Attachment", RootPart)
-                    pushBack.Attachment0 = attachment
-                    pushBack.MaxForce = 999999
-                    pushBack.VectorVelocity = Vector3.new(-RootPart.CFrame.LookVector.X * 45, 0, -RootPart.CFrame.LookVector.Z * 45)
-                    pushBack.Parent = RootPart
-                    
-                    task.wait(0.2)
-                    if pushBack then pushBack:Destroy() end
-                    if attachment then attachment:Destroy() end
+                    local runConn
+                    local elapsedTime = 0
+                    local duration = 4.5
 
-                    track.Stopped:Connect(function()
-                        local tpVelocity = Instance.new("LinearVelocity")
-                        local tpAttachment = Instance.new("Attachment", RootPart)
-                        tpVelocity.Attachment0 = tpAttachment
-                        tpVelocity.MaxForce = 50000
-                        tpVelocity.Parent = RootPart
-
-                        local runConn
-                        local elapsedTime = 0
-                        local duration = 3.5
-
-                        runConn = RunService.RenderStepped:Connect(function(dt)
-                            elapsedTime = elapsedTime + dt
-                            if elapsedTime <= duration then
-                                if character and RootPart and humanoid and humanoid.MoveDirection.Magnitude > 0 then
-                                    local moveDir = humanoid.MoveDirection
-                                    tpVelocity.VectorVelocity = Vector3.new(moveDir.X * 12, tpVelocity.VectorVelocity.Y, moveDir.Z * 12)
-                                else
-                                    tpVelocity.VectorVelocity = Vector3.new(0, 0, 0)
-                                end
+                    runConn = RunService.RenderStepped:Connect(function(dt)
+                        elapsedTime = elapsedTime + dt
+                        if elapsedTime <= duration then
+                            if character and RootPart and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+                                local moveDir = humanoid.MoveDirection
+                                tpVelocity.VectorVelocity = Vector3.new(moveDir.X * 12, tpVelocity.VectorVelocity.Y, moveDir.Z * 12)
                             else
-                                if runConn then runConn:Disconnect() end
-                                if tpVelocity then tpVelocity:Destroy() end
-                                if tpAttachment then tpAttachment:Destroy() end
-                                
-                                if RootPart and RootPart.Parent then
-                                    local explosionPos = RootPart.Position
-                                    local explosion = Instance.new("Explosion")
-                                    explosion.Position = explosionPos
-                                    explosion.BlastRadius = 35
-                                    explosion.BlastPressure = 0
-                                    explosion.Parent = Workspace
-
-                                    local missingPercent = math.clamp(50 - healthPercent, 0, 50)
-                                    local calculatedDamage = 100 + (missingPercent * 25)
-
-                                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                                        if isValidTarget(obj) then
-                                            local enemyHumanoid = obj:FindFirstChildOfClass("Humanoid")
-                                            local enemyRoot = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")
-                                            if enemyHumanoid and enemyRoot then
-                                                local distance = (enemyRoot.Position - explosionPos).Magnitude
-                                                if distance <= 35 then
-                                                    pcall(function()
-                                                        enemyHumanoid:TakeDamage(calculatedDamage)
-                                                        if enemyHumanoid.Health <= calculatedDamage then
-                                                            enemyHumanoid.Health = 0
-                                                            enemyHumanoid:ChangeState(Enum.HumanoidStateType.Dead)
-                                                        end
-                                                    end)
-                                                end
-                                            end
-                                        end
-                                    end
-                                end
-                                isTeapotThrowing = false
+                                tpVelocity.VectorVelocity = Vector3.new(0, 0, 0)
                             end
-                        end)
+                        else
+                            if runConn then runConn:Disconnect() end
+                            if tpVelocity then tpVelocity:Destroy() end
+                            if tpAttachment then tpAttachment:Destroy() end
+                            isTeapotThrowing = false
+                        end
                     end)
-                end
+                end)
             end
         end
     end)
 end
 
--- Thêm các nút điều khiển thủ công vào Menu
-createMenuButton("Anim: 11616462 (Swing)", function()
-    local char = LocalPlayer.Character
-    if char then
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
-        if animator then playCustomAnimation(animator, SWING_ANIM_ID, 1.0) end
-    end
-end, 1)
-
-createMenuButton("SpinningAnim", function()
-    local char = LocalPlayer.Character
-    if char then
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
-        if animator then playCustomAnimation(animator, SPINNING_ANIM_ID, 1.0) end
-    end
-end, 2)
-
-createMenuButton("ScreamingAnim", function()
-    local char = LocalPlayer.Character
-    if char then
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
-        if animator then playCustomAnimation(animator, SCREAM_ANIM_ID, 1.0) end
-    end
-end, 3)
-
-createMenuButton("Anim1 (180435571)", function()
-    local char = LocalPlayer.Character
-    if char then
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
-        if animator then playCustomAnimation(animator, "180435571", 1.0) end
-    end
-end, 4)
-
-createMenuButton("Anim2 (180435792)", function()
-    local char = LocalPlayer.Character
-    if char then
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
-        if animator then playCustomAnimation(animator, "180435792", 1.0) end
-    end
-end, 5)
-
-createMenuButton("IdleAnim", function()
-    local char = LocalPlayer.Character
-    if char then
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
-        if animator then playCustomAnimation(animator, "123717209698945", 1.0) end
-    end
-end, 6)
-
--- Khởi chạy kết nối
 if LocalPlayer.Character then
     setupAnimationListener(LocalPlayer.Character)
 end
-
 LocalPlayer.CharacterAdded:Connect(setupAnimationListener)
+
+---------------------------------------------------------
+-- LOGIC KIỂM TRA SÂU VÀ GẮN HALO ANGEL CHO UNIT CÓ VALUE = 11
+---------------------------------------------------------
+local function applyHaloToModel(model)
+    if not model:IsA("Model") then return end
+    
+    local function checkAndApply()
+        local head = model:FindFirstChild("Head")
+        if not head then return end
+        
+        -- Nếu máu đã <= 20% ngay từ đầu thì không gắn halo nữa
+        local humanoid = model:FindFirstChildOfClass("Humanoid")
+        if humanoid and (humanoid.Health / humanoid.MaxHealth) <= 0.2 then
+            return
+        end
+        
+        local isTargetUnit = false
+        
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("IntValue") or obj:IsA("NumberValue") or obj:IsA("StringValue") then
+                if tonumber(obj.Value) == 11 then
+                    isTargetUnit = true
+                    break
+                end
+            elseif obj:IsA("Folder") or obj:IsA("Configuration") then
+                for _, attrVal in pairs(obj:GetAttributes()) do
+                    if tonumber(attrVal) == 11 then
+                        isTargetUnit = true
+                        break
+                    end
+                end
+            end
+        end
+        
+        if not isTargetUnit then
+            for _, attrVal in pairs(model:GetAttributes()) do
+                if tonumber(attrVal) == 11 then
+                    isTargetUnit = true
+                    break
+                end
+            end
+        end
+
+        if isTargetUnit then
+            if not model:FindFirstChild("AngelHaloVisual") then
+                local haloPart = Instance.new("Part")
+                haloPart.Name = "AngelHaloVisual"
+                haloPart.Size = Vector3.new(1.366, 0.202, 1.35)
+                haloPart.Material = Enum.Material.Neon
+                haloPart.Color = Color3.fromRGB(255, 255, 255)
+                haloPart.Anchored = false
+                haloPart.CanCollide = false
+                haloPart.Massless = true
+
+                local mesh = Instance.new("SpecialMesh")
+                mesh.MeshType = Enum.MeshType.FileMesh
+                mesh.MeshId = "rbxassetid://9285228633"
+                mesh.Scale = Vector3.new(1, 1, 1)
+                mesh.Parent = haloPart
+
+                haloPart.CFrame = head.CFrame * CFrame.new(0, 1.2, 0) * CFrame.Angles(math.rad(180), math.rad(68.768), math.rad(180))
+                haloPart.Parent = model
+
+                local weld = Instance.new("WeldConstraint")
+                weld.Part0 = head
+                weld.Part1 = haloPart
+                weld.Parent = haloPart
+            end
+        end
+    end
+
+    checkAndApply()
+    model.DescendantAdded:Connect(function()
+        task.wait(0.1)
+        checkAndApply()
+    end)
+end
+
+for _, obj in ipairs(workspace:GetDescendants()) do
+    if obj:IsA("Model") then
+        applyHaloToModel(obj)
+    end
+end
+
+workspace.DescendantAdded:Connect(function(descendant)
+    if descendant:IsA("Model") then
+        task.wait(0.2)
+        applyHaloToModel(descendant)
+    end
+end)
