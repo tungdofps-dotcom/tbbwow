@@ -154,13 +154,13 @@ local phase3Triggered = false
 local isChangingPhase = false
 
 local SWING_ANIM_ID = "99881191150215"
-local LOW_HP_SWING_ID = "74660250225424"
 local TEAPOT_ANIM_ID = "126991906303498"
 local PHASE2_ANIM_ID = "117666725557838"
-local PHASE3_TRANS_ID = "110754291756171"
 
-local LOW_HP_IDLE_ID = "117666725557838"
-local LOW_HP_WALK_RUN_ID = "74660250225424"
+-- Cập nhật ID theo yêu cầu mới nhất của bro
+local PHASE3_TRANS_ID = "110754291756171"
+local LOW_HP_IDLE_ID = "81998275496859"
+local LOW_HP_WALK_RUN_ID = "18978131428"
 
 local function playCustomAnimation(animator, targetId, speedMultiplier)
     local anim = Instance.new("Animation")
@@ -256,7 +256,8 @@ local function setupAnimationListener(character)
             isChangingPhase = true
             applyLowHpAnimations(character)
             
-            local phaseTrack = playCustomAnimation(animator, PHASE3_TRANS_ID, 1.5)
+            -- Phase 3 chuyển dạng với tốc độ 2.5
+            local phaseTrack = playCustomAnimation(animator, PHASE3_TRANS_ID, 2.5)
             phaseTrack.Stopped:Connect(function()
                 isChangingPhase = false
             end)
@@ -272,16 +273,13 @@ local function setupAnimationListener(character)
             local hpPercent = (humanoid.Health / humanoid.MaxHealth)
             local isLowHp = hpPercent <= 0.2
 
-            if isLowHp and (string.find(currentId, SWING_ANIM_ID) or string.find(currentId, LOW_HP_SWING_ID)) then
+            if isLowHp and string.find(currentId, SWING_ANIM_ID) then
                 if not isSwinging then
                     isSwinging = true
-                    track:Stop(0)
-
-                    playCustomAnimation(animator, LOW_HP_SWING_ID, 2.2)
 
                     local RootPart = character:FindFirstChild("HumanoidRootPart")
                     if RootPart then
-                        -- Đúng ý bro: Animation 20% máu kích hoạt -> Đợi đúng 5 giây trong lúc animation chạy rồi mới đẩy lùi
+                        -- Khi chạy animation mốc dưới 20% máu này, đúng 5 giây sau sẽ áp dụng lực đẩy
                         task.delay(5.0, function()
                             if not RootPart or not RootPart.Parent then isSwinging = false return end
 
