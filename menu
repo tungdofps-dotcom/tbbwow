@@ -11,7 +11,6 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ReworkAbilityMenu"
 ScreenGui.Parent = CoreGui
 
--- MENU CHÍNH GUI
 local ToggleMenuBtn = Instance.new("TextButton")
 ToggleMenuBtn.Name = "ToggleMenuBtn"
 ToggleMenuBtn.Size = UDim2.new(0, 45, 0, 45)
@@ -55,9 +54,6 @@ ToggleMenuBtn.MouseButton1Click:Connect(function()
     ToggleMenuBtn.BackgroundColor3 = menuVisible and Color3.fromRGB(40, 40, 40) or Color3.fromRGB(80, 40, 40)
 end)
 
----------------------------------------------------------
--- JOYSTICK ĐIỀU KHIỂN VẬN TỐC
----------------------------------------------------------
 local JoystickBase = Instance.new("Frame")
 JoystickBase.Name = "JoystickBase"
 JoystickBase.Size = UDim2.new(0, 120, 0, 120)
@@ -151,9 +147,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
----------------------------------------------------------
--- LOGIC KỸ NĂNG, ANIMATION VÀ PHASE 2 / PHASE 3
----------------------------------------------------------
 local isSwinging = false
 local isTeapotThrowing = false
 local phase2Triggered = false
@@ -176,7 +169,6 @@ local function playCustomAnimation(animator, targetId, speedMultiplier)
     return track
 end
 
--- Tạo vụ nổ nhỏ hoàn toàn vô hại (không gây sát thương) khi vòng sáng Halo biến mất
 local function createHarmlessExplosion(character)
     local head = character:FindFirstChild("Head")
     if not head then return end
@@ -206,7 +198,6 @@ local function createHarmlessExplosion(character)
     end)
 end
 
--- Hàm gỡ bỏ Halo (chỉ kích hoạt hiệu ứng nổ nhẹ, không gây damge)
 local function removeHalo(character)
     local halo = character:FindFirstChild("AngelHaloVisual")
     if halo then
@@ -244,7 +235,6 @@ local function setupAnimationListener(character)
         local maxHealth = humanoid.MaxHealth
         local hpPercent = health / maxHealth
 
-        -- Kích hoạt Phase 2 (50% máu)
         if not phase2Triggered and hpPercent <= 0.5 and hpPercent > 0.2 then
             phase2Triggered = true
             isChangingPhase = true
@@ -254,7 +244,6 @@ local function setupAnimationListener(character)
                 isChangingPhase = false
             end)
             
-        -- Kích hoạt Phase 3 (20% máu)
         elseif not phase3Triggered and hpPercent <= 0.2 then
             phase3Triggered = true
             isChangingPhase = true
@@ -349,7 +338,6 @@ local function setupAnimationListener(character)
                     end
                 end
 
-            -- [SỬA LẠI THEO YÊU CẦU]: Phase 2 của chiêu swing được giữ nguyên logic ban đầu chuẩn xác 100%
             elseif not isLowHp and string.find(currentId, SWING_ANIM_ID) then
                 if not isSwinging then
                     isSwinging = true
@@ -433,9 +421,6 @@ if LocalPlayer.Character then
 end
 LocalPlayer.CharacterAdded:Connect(setupAnimationListener)
 
----------------------------------------------------------
--- LOGIC KIỂM TRA SÂU VÀ GẮN HALO ANGEL CHO UNIT CÓ VALUE = 11
----------------------------------------------------------
 local function applyHaloToModel(model)
     if not model:IsA("Model") then return end
     
@@ -464,61 +449,3 @@ local function applyHaloToModel(model)
                     end
                 end
             end
-        end
-        
-        if not isTargetUnit then
-            for _, attrVal in pairs(model:GetAttributes()) do
-                if tonumber(attrVal) == 11 then
-                    isTargetUnit = true
-                    break
-                end
-            end
-        end
-
-        if isTargetUnit then
-            if not model:FindFirstChild("AngelHaloVisual") then
-                local haloPart = Instance.new("Part")
-                haloPart.Name = "AngelHaloVisual"
-                haloPart.Size = Vector3.new(1.366, 0.202, 1.35)
-                haloPart.Material = Enum.Material.Neon
-                haloPart.Color = Color3.fromRGB(255, 255, 255)
-                haloPart.Anchored = false
-                haloPart.CanCollide = false
-                haloPart.Massless = true
-
-                local mesh = Instance.new("SpecialMesh")
-                mesh.MeshType = Enum.MeshType.FileMesh
-                mesh.MeshId = "rbxassetid://9285228633"
-                mesh.Scale = Vector3.new(1, 1, 1)
-                mesh.Parent = haloPart
-
-                haloPart.CFrame = head.CFrame * CFrame.new(0, 1.2, 0) * CFrame.Angles(math.rad(180), math.rad(68.768), math.rad(180))
-                haloPart.Parent = model
-
-                local weld = Instance.new("WeldConstraint")
-                weld.Part0 = head
-                weld.Part1 = haloPart
-                weld.Parent = haloPart
-            end
-        end
-    end
-
-    checkAndApply()
-    model.DescendantAdded:Connect(function()
-        task.wait(0.1)
-        checkAndApply()
-    end)
-end
-
-for _, obj in ipairs(workspace:GetDescendants()) do
-    if obj:IsA("Model") then
-        applyHaloToModel(obj)
-    end
-end
-
-workspace.DescendantAdded:Connect(function(descendant)
-    if descendant:IsA("Model") then
-        task.wait(0.2)
-        applyHaloToModel(descendant)
-    end
-end)
